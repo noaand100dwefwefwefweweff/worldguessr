@@ -1,0 +1,259 @@
+(() => {
+  if (document.getElementById('noahMenu')) return;
+
+  // --- Styles ---
+  const style = document.createElement('style');
+  style.textContent = `
+    #noahMenu {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #121212dd;
+      color: #eee;
+      padding: 15px 20px;
+      border-radius: 12px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      z-index: 100000;
+      width: 340px;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+      user-select: none;
+      cursor: grab;
+      transition: background-color 0.25s ease;
+    }
+    #noahMenu:active {
+      cursor: grabbing;
+      background: #1e1e1edd;
+    }
+    #noahMenu h2 {
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      font-size: 20px;
+      text-align: center;
+      letter-spacing: 0.03em;
+      user-select: none;
+    }
+    #noahMenu button {
+      background-color: #0066ff;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      margin: 5px 8px 0 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgb(0 102 255 / 0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+    #noahMenu button:hover {
+      background-color: #004fcc;
+      box-shadow: 0 5px 15px rgb(0 102 255 / 0.7);
+    }
+    #noahCoordsDisplay {
+      margin-top: 14px;
+      font-size: 14px;
+      text-align: center;
+      min-height: 22px;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+      user-select: text;
+    }
+    #noahMapDisplay {
+      margin-top: 14px;
+      width: 100%;
+      height: 380px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+      box-shadow: 0 0 18px rgba(0,0,0,0.75);
+    }
+    #noahMapDisplay iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+    }
+    #toggleHint {
+      font-size: 11px;
+      margin-top: 10px;
+      text-align: center;
+      color: #aaa;
+      user-select: none;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // --- Create Menu ---
+  const menu = document.createElement('div');
+  menu.id = 'noahMenu';
+  menu.innerHTML = `
+    <h2>Made by Noah</h2>
+    <div style="text-align:center;">
+      <button id="reloadLocationBtn">Reload Location</button>
+      <button id="markItBtn">Mark It</button>
+      <button id="funSecretBtn">Fun Secret</button>
+      <button id="shutdownBtn" style="background:#cc3300;">Shutdown</button>
+    </div>
+    <div id="noahCoordsDisplay"></div>
+    <div id="noahMapDisplay"></div>
+    <div id="toggleHint">Press <b>E</b> to toggle menu visibility<br>Press <b>P</b> to shutdown completely</div>
+  `;
+  document.body.appendChild(menu);
+
+  const reloadBtn = document.getElementById('reloadLocationBtn');
+  const markBtn = document.getElementById('markItBtn');
+  const funSecretBtn = document.getElementById('funSecretBtn');
+  const shutdownBtn = document.getElementById('shutdownBtn');
+  const coordsDisplay = document.getElementById('noahCoordsDisplay');
+  const mapDisplay = document.getElementById('noahMapDisplay');
+
+  // Helper to create random string for iframe ID
+  function createRandomString(length) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    const randomArray = new Uint8Array(length);
+    crypto.getRandomValues(randomArray);
+    randomArray.forEach((number) => {
+      result += chars[number % chars.length];
+    });
+    return result;
+  }
+
+  // Extract lat/lng from iframe URL
+  function extractCoordinates() {
+    const iframe = document.querySelector('[title="Street View Embed"]');
+    if (!iframe) {
+      coordsDisplay.textContent = "Street View iframe not found.";
+      mapDisplay.style.display = "none";
+      return null;
+    }
+    const urlParams = iframe.src.split("&");
+    let latitude = null;
+    let longitude = null;
+    urlParams.forEach(param => {
+      if (param.includes("lat")) latitude = parseFloat(param.split("=")[1]);
+      if (param.includes("long")) longitude = parseFloat(param.split("=")[1]);
+    });
+    if (latitude && longitude) {
+      coordsDisplay.textContent = `Latitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}`;
+      return { latitude, longitude };
+    } else {
+      coordsDisplay.textContent = "Coordinates not found in iframe URL.";
+      mapDisplay.style.display = "none";
+      return null;
+    }
+  }
+
+  // Show minimap for coords
+  function showMap(lat, long) {
+    const iframeId = createRandomString(8);
+    mapDisplay.innerHTML = `
+      <iframe id="${iframeId}" 
+        src="https://maps.google.com/maps?width=100%&height=100%&hl=en&q=${lat},${long}&t=&z=14&ie=UTF8&iwloc=B&output=embed" 
+        ></iframe>`;
+    mapDisplay.style.display = "block";
+  }
+
+  // Button handlers
+  reloadBtn.onclick = () => {
+    const coords = extractCoordinates();
+    if (!coords) return;
+    showMap(coords.latitude, coords.longitude);
+  };
+
+  markBtn.onclick = () => {
+    const map = document.querySelector('.leaflet-container, #map, .gm-style');
+    if (!map) {
+      alert("Map element not found. Can't mark location.");
+      return;
+    }
+    const rect = map.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    ['mousedown', 'mouseup', 'click'].forEach(eventType => {
+      const evt = new MouseEvent(eventType, {
+        bubbles: true,
+        cancelable: true,
+        clientX: centerX,
+        clientY: centerY,
+        view: window
+      });
+      map.dispatchEvent(evt);
+    });
+
+    alert("This no longer works or has been pathced.");
+  };
+
+  funSecretBtn.onclick = () => {
+    window.open("https://www.youtube.com/watch?v=3qi4OaOKyZI", "_blank");
+  };
+
+  let disabled = false;
+
+  function shutdown() {
+    disabled = true;
+    menu.style.display = 'none';
+    console.log("Loader has been closed by panic");
+  }
+
+  shutdownBtn.onclick = shutdown;
+
+  // Keyboard toggling
+  document.addEventListener('keydown', (e) => {
+    if (disabled) return;
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+    if (e.key.toLowerCase() === 'e') {
+      menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
+    } else if (e.key.toLowerCase() === 'p') {
+      shutdown();
+    }
+  });
+
+  // --- Draggable Menu ---
+  let isDragging = false;
+  let dragStartX, dragStartY;
+  let menuStartLeft, menuStartTop;
+
+  menu.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    const style = window.getComputedStyle(menu);
+    menuStartLeft = parseInt(style.left, 10);
+    menuStartTop = parseInt(style.top, 10);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    let newLeft = menuStartLeft + (e.clientX - dragStartX);
+    let newTop = menuStartTop + (e.clientY - dragStartY);
+
+    const maxLeft = window.innerWidth - menu.offsetWidth - 10;
+    if (newLeft < 10) newLeft = 10;
+    if (newLeft > maxLeft) newLeft = maxLeft;
+
+    const maxTop = window.innerHeight - menu.offsetHeight - 10;
+    if (newTop < 10) newTop = 10;
+    if (newTop > maxTop) newTop = maxTop;
+
+    menu.style.left = newLeft + "px";
+    menu.style.top = newTop + "px";
+    menu.style.transform = "none";
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  // Initial load
+  reloadBtn.click();
+
+  console.log("Cheats loaded");
+})();
