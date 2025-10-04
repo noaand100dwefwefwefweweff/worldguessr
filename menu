@@ -1,7 +1,7 @@
 (() => {
   if (document.getElementById('noahMenu')) return;
 
-  // --- Styles ---
+  
   const style = document.createElement('style');
   style.textContent = `
     #noahMenu {
@@ -85,7 +85,7 @@
   `;
   document.head.appendChild(style);
 
-  // --- Create Menu ---
+  
   const menu = document.createElement('div');
   menu.id = 'noahMenu';
   menu.innerHTML = `
@@ -109,7 +109,7 @@
   const coordsDisplay = document.getElementById('noahCoordsDisplay');
   const mapDisplay = document.getElementById('noahMapDisplay');
 
-  // Helper to create random string for iframe ID
+  
   function createRandomString(length) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
@@ -121,7 +121,7 @@
     return result;
   }
 
-  // Extract lat/lng from iframe URL
+  
   function extractCoordinates() {
     const iframe = document.querySelector('[title="Street View Embed"]');
     if (!iframe) {
@@ -146,7 +146,7 @@
     }
   }
 
-  // Show minimap for coords
+  
   function showMap(lat, long) {
     const iframeId = createRandomString(8);
     mapDisplay.innerHTML = `
@@ -156,7 +156,7 @@
     mapDisplay.style.display = "block";
   }
 
-  // Button handlers
+  
   reloadBtn.onclick = () => {
     const coords = extractCoordinates();
     if (!coords) return;
@@ -201,7 +201,7 @@
 
   shutdownBtn.onclick = shutdown;
 
-  // Keyboard toggling
+  
   document.addEventListener('keydown', (e) => {
     if (disabled) return;
     const active = document.activeElement;
@@ -214,7 +214,7 @@
     }
   });
 
-  // --- Draggable Menu ---
+
   let isDragging = false;
   let dragStartX, dragStartY;
   let menuStartLeft, menuStartTop;
